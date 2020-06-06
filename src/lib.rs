@@ -57,6 +57,8 @@ pub struct ArgParser {
     flags: Vec<Flag>,
     flag_map: HashMap<String, usize>,
     arguments: Vec<String>,
+    commands: Vec<ArgParser>,
+    command_map: HashMap<String, usize>,
 }
 
 
@@ -71,6 +73,8 @@ impl ArgParser {
             flags: Vec::new(),
             flag_map: HashMap::new(),
             arguments: Vec::new(),
+            commands: Vec::new(),
+            command_map: HashMap::new(),
         }
     }
 
@@ -106,6 +110,16 @@ impl ArgParser {
         }
     }
 
+    pub fn command(&mut self, name: &str) -> &mut ArgParser {
+        self.commands.push(ArgParser::new());
+        let index = self.commands.len() - 1;
+        for alias in name.split_whitespace() {
+            self.command_map.insert(alias.to_string(), index);
+        }
+        &mut self.commands[index]
+    }
+
+
     // --------
     // Getters.
     // --------
@@ -117,14 +131,14 @@ impl ArgParser {
             }
             return Ok(None);
         }
-        Err(Error::BadName(name.to_string()))
+        Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
     pub fn values(&self, name: &str) -> Result<Vec<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
             return Ok(self.options[*index].values.clone());
         }
-        Err(Error::BadName(name.to_string()))
+        Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
     pub fn count(&self, name: &str) -> Result<usize, Error> {
@@ -134,7 +148,7 @@ impl ArgParser {
         if let Some(index) = self.option_map.get(name) {
             return Ok(self.options[*index].values.len());
         }
-        Err(Error::BadName(name.to_string()))
+        Err(Error::BadName(format!("'{}' is not a registered name", name)))
     }
 
     pub fn found(&self, name: &str) -> Result<bool, Error> {

@@ -14,6 +14,10 @@ fn main() {
         println!("{:#?}", parser);
     }
 
+    match parser.values("file") {
+        Ok(values) => println!("{:?}", values),
+        Err(err) => println!("{:?}", err),
+    };
 
 
     // let foo = vec!["foo", "bar", "baz"];
