@@ -5,21 +5,19 @@ use std::collections::HashMap;
 pub enum Error {
     BadName(String),
     MissingValue(String),
+    MissingHelpCmdArg,
 }
 
 
 impl Error {
-    pub fn exit(&self) -> ! {
-        match self {
-            Error::BadName(msg) =>  {
-                eprintln!("Error: {}.", msg);
-                std::process::exit(1);
-            },
-            Error::MissingValue(msg) =>  {
-                eprintln!("Error: {}.", msg);
-                std::process::exit(1);
-            },
-        }
+    pub fn exit(self) -> ! {
+        let msg = match self {
+            Error::BadName(msg) =>  msg,
+            Error::MissingValue(msg) =>  msg,
+            Error::MissingHelpCmdArg => "missing argument for the help command".to_string(),
+        };
+        eprintln!("Error: {}.", msg);
+        std::process::exit(1);
     }
 }
 
@@ -49,19 +47,16 @@ impl ArgStream {
 }
 
 
-#[derive(Debug)]
 struct Opt {
     values: Vec<String>,
 }
 
 
-#[derive(Debug)]
 struct Flag {
     count: usize,
 }
 
 
-#[derive(Debug)]
 pub struct ArgParser {
     helptext: Option<String>,
     version: Option<String>,
@@ -73,6 +68,8 @@ pub struct ArgParser {
     commands: Vec<ArgParser>,
     command_map: HashMap<String, usize>,
     command_name: Option<String>,
+    callback: Option<fn(&str, &ArgParser)>,
+    auto_help_cmd: bool,
 }
 
 
@@ -89,6 +86,8 @@ impl ArgParser {
             commands: Vec::new(),
             command_map: HashMap::new(),
             command_name: None,
+            callback: None,
+            auto_help_cmd: true,
         }
     }
 
@@ -96,13 +95,13 @@ impl ArgParser {
     // Builders.
     // ---------
 
-    pub fn helptext(mut self, text: &str) -> Self {
-        self.helptext = Some(text.trim().to_string());
+    pub fn helptext<S>(mut self, text: S) -> Self where S: Into<String> {
+        self.helptext = Some(text.into());
         self
     }
 
-    pub fn version(mut self, text: &str) -> Self {
-        self.version = Some(text.trim().to_string());
+    pub fn version<S>(mut self, text: S) -> Self where S: Into<String> {
+        self.version = Some(text.into());
         self
     }
 
@@ -134,6 +133,11 @@ impl ArgParser {
         for alias in name.split_whitespace() {
             self.command_map.insert(alias.to_string(), index);
         }
+        self
+    }
+
+    pub fn callback(mut self, f: fn(&str, &ArgParser)) -> Self {
+        self.callback = Some(f);
         self
     }
 
@@ -252,9 +256,31 @@ impl ArgParser {
             }
 
             else if is_first_arg && self.command_map.contains_key(&arg) {
+                self.command_name = Some(arg.to_string());
                 let index = self.command_map.get(&arg).unwrap();
-                self.commands[*index].parse_argstream(argstream)?;
-                self.command_name = Some(arg);
+                let cmd_parser = &mut self.commands[*index];
+                cmd_parser.parse_argstream(argstream)?;
+                if let Some(callback) = cmd_parser.callback {
+                    callback(&arg, cmd_parser);
+                }
+            }
+
+            else if is_first_arg && arg == "help" && self.auto_help_cmd {
+                if argstream.has_next() {
+                    let name = argstream.next();
+                    if let Some(index) = self.command_map.get(&name) {
+                        let cmd_parser = &mut self.commands[*index];
+                        let helptext = cmd_parser.helptext.as_deref().unwrap_or("").trim();
+                        println!("{}", helptext);
+                        std::process::exit(0);
+                    } else {
+                        return Err(
+                            Error::BadName(format!("'{}' is not a recognised command name", &name))
+                        );
+                    }
+                } else {
+                    return Err(Error::MissingHelpCmdArg);
+                }
             }
 
             else {
@@ -281,12 +307,12 @@ impl ArgParser {
         }
 
         else if arg == "--help" && self.helptext.is_some() {
-            println!("{}", self.helptext.as_ref().unwrap());
+            println!("{}", self.helptext.as_ref().unwrap().trim());
             std::process::exit(0);
         }
 
         else if arg == "--version" && self.version.is_some() {
-            println!("{}", self.version.as_ref().unwrap());
+            println!("{}", self.version.as_ref().unwrap().trim());
             std::process::exit(0);
         }
 
@@ -310,10 +336,10 @@ impl ArgParser {
                     );
                 }
             } else if c == 'h' && self.helptext.is_some() {
-                println!("{}", self.helptext.as_ref().unwrap());
+                println!("{}", self.helptext.as_ref().unwrap().trim());
                 std::process::exit(0);
             } else if c == 'v' && self.version.is_some() {
-                println!("{}", self.version.as_ref().unwrap());
+                println!("{}", self.version.as_ref().unwrap().trim());
                 std::process::exit(0);
             } else {
                 return Err(
