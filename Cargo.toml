@@ -1,6 +1,6 @@
 [package]
 name = "arguably"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Darren Mulholland <dmulholl@tcd.ie>"]
 edition = "2018"
 license = "MIT"

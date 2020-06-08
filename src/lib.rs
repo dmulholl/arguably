@@ -5,7 +5,7 @@ use std::collections::HashMap;
 pub enum Error {
     BadName(String),
     MissingValue(String),
-    MissingHelpCmdArg,
+    MissingHelpArg,
 }
 
 
@@ -14,7 +14,7 @@ impl Error {
         let msg = match self {
             Error::BadName(msg) =>  msg,
             Error::MissingValue(msg) =>  msg,
-            Error::MissingHelpCmdArg => "missing argument for the help command".to_string(),
+            Error::MissingHelpArg => "missing argument for the help command".to_string(),
         };
         eprintln!("Error: {}.", msg);
         std::process::exit(1);
@@ -279,7 +279,7 @@ impl ArgParser {
                         );
                     }
                 } else {
-                    return Err(Error::MissingHelpCmdArg);
+                    return Err(Error::MissingHelpArg);
                 }
             }
 
