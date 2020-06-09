@@ -3,26 +3,24 @@ use arguably::ArgParser;
 
 fn main() {
     let mut parser = ArgParser::new()
-        .helptext("help!")
-        .version("v1.0")
-        .option("file f")
-        .flag("quiet q");
+        .helptext("Usage: foobar...")
+        .version("1.0")
+        .flag("foo f")
+        .option("bar b");
 
     if let Err(err) = parser.parse() {
         err.exit();
     }
 
-    println!(
-        "quiet: {} ({})",
-        parser.found("quiet").unwrap(),
-        parser.count("quiet").unwrap()
-    );
+    if parser.found("foo").unwrap() {
+        println!("Found --foo/-f flag.");
+    }
 
-    if let Some(filename) = parser.value("file").unwrap() {
-        println!("file: {}", filename);
+    if let Some(value) = parser.value("bar").unwrap() {
+        println!("Found --bar/-b option with value: {}", value);
     }
 
     for arg in parser.args() {
-        println!("arg: {}", arg);
+        println!("Arg: {}", arg);
     }
 }
