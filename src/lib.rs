@@ -1,20 +1,48 @@
+//! A minimalist library for parsing command line arguments.
+//!
+//! ## Example
+//! ```
+//! # use arguably::ArgParser;
+//! let mut parser = ArgParser::new()
+//!     .helptext("Usage: foobar...")
+//!     .version("1.0")
+//!     .flag("foo f")
+//!     .option("bar b");
+//!
+//! if let Err(err) = parser.parse() {
+//!     err.exit();
+//! }
+//!
+//! if parser.found("foo").unwrap() {
+//!     println!("Found --foo/-f flag.");
+//! }
+//!
+//! if let Some(value) = parser.value("bar").unwrap() {
+//!     println!("Found --bar/-b option with value: {}", value);
+//! }
+//!
+//! for arg in parser.args() {
+//!     println!("Arg: {}", arg);
+//! }
+//! ```
+
 use std::collections::HashMap;
 
 
 /// Covers all types of error returned by the library.
 #[derive(Debug)]
 pub enum Error {
-    /// Occurs when the parser finds an unregistered option name, either on the command
-    /// line or in an API call.
+    /// Occurs when the parser is presented with an unregistered option name, either
+    /// on the command line or in an API call.
     BadName(String),
 
-    /// Occurs when the parser finds an option with a missing value.
+    /// Occurs when the parser detects an option with a missing value.
     MissingValue(String),
 
-    /// Occurs when the parser finds a help command with an missing argument.
+    /// Occurs when the parser detects a help command with a missing argument.
     MissingHelpArg,
 
-    /// Occurs when the command line arguments cannot be parsed as unicode strings.
+    /// Occurs when the command line arguments are not valid unicode strings.
     NotUnicode,
 }
 
@@ -34,13 +62,11 @@ impl Error {
 }
 
 
-/// All the library's functionality is wrapped up in an ArgParser instance
-/// initialized using the builder pattern.
+/// An ArgParser instance can be intialized using the builder pattern.
 ///
 /// ```
-/// use arguably::ArgParser;
-///
-/// let mut parser = ArgParser::new()
+/// # use arguably::ArgParser;
+/// let parser = ArgParser::new()
 ///     .helptext("Usage: appname...")
 ///     .version("1.0")
 ///     .flag("foo f")
@@ -83,6 +109,12 @@ impl ArgParser {
 
     /// Sets the parser's helptext string. Supplying a helptext string turns on support
     /// for an automatic `--help/-h` flag.
+    ///
+    /// ```
+    /// # use arguably::ArgParser;
+    /// let parser = ArgParser::new()
+    ///     .helptext("Usage: appname...");
+    /// ```
     pub fn helptext<S>(mut self, text: S) -> Self where S: Into<String> {
         self.helptext = Some(text.into());
         self
@@ -90,6 +122,12 @@ impl ArgParser {
 
     /// Sets the parser's version string. Supplying a version string turns on support
     /// for an automatic `--version/-v` flag.
+    ///
+    /// ```
+    /// # use arguably::ArgParser;
+    /// let parser = ArgParser::new()
+    ///     .version("1.0");
+    /// ```
     pub fn version<S>(mut self, text: S) -> Self where S: Into<String> {
         self.version = Some(text.into());
         self
@@ -97,6 +135,12 @@ impl ArgParser {
 
     /// Registers a new option. The name parameter accepts an unlimited number of
     /// space-separated aliases.
+    ///
+    /// ```
+    /// # use arguably::ArgParser;
+    /// let parser = ArgParser::new()
+    ///     .option("name1 name2 n");
+    /// ```
     pub fn option(mut self, name: &str) -> Self {
         self.options.push(Opt {
             values: Vec::new(),
@@ -110,6 +154,12 @@ impl ArgParser {
 
     /// Registers a new flag. The name parameter accepts an unlimited number of
     /// space-separated aliases.
+    ///
+    /// ```
+    /// # use arguably::ArgParser;
+    /// let parser = ArgParser::new()
+    ///     .flag("name1 name2 n");
+    /// ```
     pub fn flag(mut self, name: &str) -> Self {
         self.flags.push(Flag {
             count: 0,
@@ -121,8 +171,9 @@ impl ArgParser {
         self
     }
 
-    /// Registers a new command. The name parameter accepts an unlimited number of space-
-    /// separated aliases.
+    /// Registers a new command. The name parameter accepts an unlimited number of
+    /// space-separated aliases. The command's helptext, flags, and options can be
+    /// registered on the command's ArgParser instance.
     ///
     /// ```
     /// # use arguably::ArgParser;
@@ -130,6 +181,7 @@ impl ArgParser {
     ///     .helptext("Usage: appname...")
     ///     .command("cmdname", ArgParser::new()
     ///         .helptext("Usage: appname cmdname...")
+    ///         .flag("cmdflag")
     ///     );
     /// ```
     pub fn command(mut self, name: &str, cmd_parser: ArgParser) -> Self {
@@ -149,15 +201,14 @@ impl ArgParser {
         self
     }
 
+    /// Turns on an automatic `help` command for printing subcommand helptext.
     pub fn enable_help_command(mut self) -> Self {
         self.auto_help_cmd = true;
         self
     }
 
-    // --------
-    // Getters.
-    // --------
-
+    /// Returns the value of the named option. Returns an error if `name` is not a registered
+    /// option name. Returns `None` if the option was not found.
     pub fn value(&self, name: &str) -> Result<Option<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
             if let Some(value) = self.options[*index].values.last() {
@@ -168,6 +219,8 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
+    /// Returns the named option's list of values. Returns an error if `name` is not a
+    /// registered option name.
     pub fn values(&self, name: &str) -> Result<Vec<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
             return Ok(self.options[*index].values.clone());
@@ -175,6 +228,8 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
+    /// Returns the number of times the named option was found. Returns an error if `name`
+    /// is not a registered option name.
     pub fn count(&self, name: &str) -> Result<usize, Error> {
         if let Some(index) = self.flag_map.get(name) {
             return Ok(self.flags[*index].count);
@@ -185,6 +240,8 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered name", name)))
     }
 
+    /// Returns `true` if the named option was found. Returns an error if `name` is not a
+    /// registered option name.
     pub fn found(&self, name: &str) -> Result<bool, Error> {
         match self.count(name) {
             Ok(count) => Ok(count > 0),
@@ -192,26 +249,32 @@ impl ArgParser {
         }
     }
 
+    /// Returns `true` if one or more positional arguments have been found.
     pub fn has_args(&self) -> bool {
         self.arguments.len() > 0
     }
 
+    /// Returns the number of positional arguments.
     pub fn num_args(&self) -> usize {
         self.arguments.len()
     }
 
+    /// Returns the positional arguments.
     pub fn args(&self) -> Vec<String> {
         self.arguments.clone()
     }
 
+    /// Returns `true` if a command was found.
     pub fn has_cmd(&self) -> bool {
         self.command_name.is_some()
     }
 
+    /// If a command was found, returns the command's name.
     pub fn cmd_name(&self) -> Option<&str> {
         self.command_name.as_deref()
     }
 
+    /// If a command was found, returns a reference to the command's ArgParser instance.
     pub fn cmd_parser(&self) -> Option<&ArgParser> {
         if let Some(name) = self.command_name.as_ref() {
             let index = self.command_map.get(name).unwrap();
@@ -220,10 +283,14 @@ impl ArgParser {
         None
     }
 
-    // ------------------
-    // Parsing machinery.
-    // ------------------
-
+    /// Parse the program's command line arguments.
+    ///
+    /// ```
+    /// # let mut parser = arguably::ArgParser::new();
+    /// if let Err(err) = parser.parse() {
+    ///     err.exit();
+    /// }
+    /// ```
     pub fn parse(&mut self) -> Result<(), Error> {
         let mut strings = Vec::<String>::new();
         for os_string in std::env::args_os().skip(1) {
@@ -238,6 +305,7 @@ impl ArgParser {
         Ok(())
     }
 
+    /// Parse a vector of strings. This function is intended for testing only.
     pub fn parse_args(&mut self, args: Vec<&str>) -> Result<(), Error> {
         let strings = args.iter().map(|s| s.to_string()).collect();
         let mut stream = ArgStream::new(strings);
