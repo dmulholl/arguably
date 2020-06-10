@@ -1,6 +1,9 @@
 # Arguably
 
-A simple argument-parsing library for Rust.
+A minimalist argument-parsing library for Rust.
 
-(This package is experimental and not yet ready for public use.)
+* [Details](http://www.dmulholl.com/dev/arguably.html)
+* [Package](https://crates.io/crates/arguably)
+
+This package is unstable and its API is likely to change.
 

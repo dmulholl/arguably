@@ -5,5 +5,5 @@ authors = ["Darren Mulholland <dmulholl@tcd.ie>"]
 edition = "2018"
 license = "MIT"
 repository = "https://github.com/dmulholl/arguably"
-description = "A simple argument-parsing library."
+description = "A minimalist argument-parsing library."
 
