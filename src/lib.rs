@@ -1,20 +1,32 @@
 use std::collections::HashMap;
 
 
+/// Covers all types of error returned by the library.
 #[derive(Debug)]
 pub enum Error {
+    /// Occurs when the parser finds an unregistered option name, either on the command
+    /// line or in an API call.
     BadName(String),
+
+    /// Occurs when the parser finds an option with a missing value.
     MissingValue(String),
+
+    /// Occurs when the parser finds a help command with an missing argument.
     MissingHelpArg,
+
+    /// Occurs when the command line arguments cannot be parsed as unicode strings.
+    NotUnicode,
 }
 
 
 impl Error {
+    /// Prints an error message to `stderr` and exits with status code 1.
     pub fn exit(self) -> ! {
         let msg = match self {
             Error::BadName(msg) =>  msg,
             Error::MissingValue(msg) =>  msg,
             Error::MissingHelpArg => "missing argument for the help command".to_string(),
+            Error::NotUnicode => "arguments are not unicode strings".to_string(),
         };
         eprintln!("Error: {}.", msg);
         std::process::exit(1);
@@ -22,41 +34,18 @@ impl Error {
 }
 
 
-struct ArgStream {
-    args: Vec<String>,
-    index: usize,
-}
-
-
-impl ArgStream {
-    fn new(args: Vec<String>) -> ArgStream {
-        ArgStream {
-            args: args,
-            index: 0,
-        }
-    }
-
-    fn has_next(&self) -> bool {
-        self.index < self.args.len()
-    }
-
-    fn next(&mut self) -> String {
-        self.index += 1;
-        self.args[self.index - 1].clone()
-    }
-}
-
-
-struct Opt {
-    values: Vec<String>,
-}
-
-
-struct Flag {
-    count: usize,
-}
-
-
+/// All the library's functionality is wrapped up in an ArgParser instance
+/// initialized using the builder pattern.
+///
+/// ```
+/// use arguably::ArgParser;
+///
+/// let mut parser = ArgParser::new()
+///     .helptext("Usage: appname...")
+///     .version("1.0")
+///     .flag("foo f")
+///     .option("bar b");
+/// ```
 pub struct ArgParser {
     helptext: Option<String>,
     version: Option<String>,
@@ -74,6 +63,7 @@ pub struct ArgParser {
 
 
 impl ArgParser {
+    /// Creates a new ArgParser instance.
     pub fn new() -> ArgParser {
         ArgParser {
             helptext: None,
@@ -87,24 +77,26 @@ impl ArgParser {
             command_map: HashMap::new(),
             command_name: None,
             callback: None,
-            auto_help_cmd: true,
+            auto_help_cmd: false,
         }
     }
 
-    // ---------
-    // Builders.
-    // ---------
-
+    /// Sets the parser's helptext string. Supplying a helptext string turns on support
+    /// for an automatic `--help/-h` flag.
     pub fn helptext<S>(mut self, text: S) -> Self where S: Into<String> {
         self.helptext = Some(text.into());
         self
     }
 
+    /// Sets the parser's version string. Supplying a version string turns on support
+    /// for an automatic `--version/-v` flag.
     pub fn version<S>(mut self, text: S) -> Self where S: Into<String> {
         self.version = Some(text.into());
         self
     }
 
+    /// Registers a new option. The name parameter accepts an unlimited number of
+    /// space-separated aliases.
     pub fn option(mut self, name: &str) -> Self {
         self.options.push(Opt {
             values: Vec::new(),
@@ -116,6 +108,8 @@ impl ArgParser {
         self
     }
 
+    /// Registers a new flag. The name parameter accepts an unlimited number of
+    /// space-separated aliases.
     pub fn flag(mut self, name: &str) -> Self {
         self.flags.push(Flag {
             count: 0,
@@ -127,6 +121,17 @@ impl ArgParser {
         self
     }
 
+    /// Registers a new command. The name parameter accepts an unlimited number of space-
+    /// separated aliases.
+    ///
+    /// ```
+    /// # use arguably::ArgParser;
+    /// let mut parser = ArgParser::new()
+    ///     .helptext("Usage: appname...")
+    ///     .command("cmdname", ArgParser::new()
+    ///         .helptext("Usage: appname cmdname...")
+    ///     );
+    /// ```
     pub fn command(mut self, name: &str, cmd_parser: ArgParser) -> Self {
         self.commands.push(cmd_parser);
         let index = self.commands.len() - 1;
@@ -136,8 +141,16 @@ impl ArgParser {
         self
     }
 
+    /// Registers a callback function on a command parser. If the command is found the
+    /// callback will be called and passed the command name and a reference to the
+    /// command's parser instance.
     pub fn callback(mut self, f: fn(&str, &ArgParser)) -> Self {
         self.callback = Some(f);
+        self
+    }
+
+    pub fn enable_help_command(mut self) -> Self {
+        self.auto_help_cmd = true;
         self
     }
 
@@ -212,7 +225,14 @@ impl ArgParser {
     // ------------------
 
     pub fn parse(&mut self) -> Result<(), Error> {
-        let strings = std::env::args().skip(1).collect();
+        let mut strings = Vec::<String>::new();
+        for os_string in std::env::args_os().skip(1) {
+            if let Ok(string) = os_string.into_string() {
+                strings.push(string);
+            } else {
+                return Err(Error::NotUnicode);
+            }
+        }
         let mut stream = ArgStream::new(strings);
         self.parse_argstream(&mut stream)?;
         Ok(())
@@ -365,5 +385,40 @@ impl ArgParser {
         }
         return Err(Error::BadName(format!("{} is not a recognised option name", name)));
     }
+}
+
+
+struct ArgStream {
+    args: Vec<String>,
+    index: usize,
+}
+
+
+impl ArgStream {
+    fn new(args: Vec<String>) -> ArgStream {
+        ArgStream {
+            args: args,
+            index: 0,
+        }
+    }
+
+    fn has_next(&self) -> bool {
+        self.index < self.args.len()
+    }
+
+    fn next(&mut self) -> String {
+        self.index += 1;
+        self.args[self.index - 1].clone()
+    }
+}
+
+
+struct Opt {
+    values: Vec<String>,
+}
+
+
+struct Flag {
+    count: usize,
 }
 
