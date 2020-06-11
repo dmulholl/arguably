@@ -242,8 +242,8 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
-    /// Returns the number of times the named option was found. Returns an error if `name`
-    /// is not a registered option name.
+    /// Returns the number of times the named option or flag  was found. Returns an error
+    /// if `name` is not a registered option name.
     pub fn count(&self, name: &str) -> Result<usize, Error> {
         if let Some(index) = self.flag_map.get(name) {
             return Ok(self.flags[*index].count);
@@ -254,8 +254,8 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered name", name)))
     }
 
-    /// Returns `true` if the named option was found. Returns an error if `name` is not a
-    /// registered option name.
+    /// Returns `true` if the named option or flag was found. Returns an error if `name`
+    /// is not a registered option name.
     pub fn found(&self, name: &str) -> Result<bool, Error> {
         match self.count(name) {
             Ok(count) => Ok(count > 0),
