@@ -147,8 +147,8 @@ impl ArgParser {
         self
     }
 
-    /// Registers a new option. The name parameter accepts an unlimited number of
-    /// space-separated aliases.
+    /// Registers a new option. The `name` parameter accepts an unlimited number of
+    /// space-separated aliases and single-character shortcuts.
     ///
     /// ```
     /// # use arguably::ArgParser;
@@ -166,8 +166,8 @@ impl ArgParser {
         self
     }
 
-    /// Registers a new flag. The name parameter accepts an unlimited number of
-    /// space-separated aliases.
+    /// Registers a new flag. The `name` parameter accepts an unlimited number of
+    /// space-separated aliases and single-character shortcuts.
     ///
     /// ```
     /// # use arguably::ArgParser;

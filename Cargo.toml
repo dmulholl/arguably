@@ -1,9 +1,10 @@
 [package]
 name = "arguably"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Darren Mulholland <dmulholl@tcd.ie>"]
 edition = "2018"
 license = "MIT"
 repository = "https://github.com/dmulholl/arguably"
+homepage = "http://www.dmulholl.com/dev/arguably.html"
 description = "A minimalist argument-parsing library."
 
