@@ -6,5 +6,5 @@ A minimalist argument-parsing library for Rust.
 * [Package](https://crates.io/crates/arguably)
 * [Package Documentation](https://docs.rs/arguably)
 
-This package is not yet stable &mdash; its API may change along the road to 1.0.
+Note &mdash; this package is not yet stable, its API may change along the road to 1.0.
 
