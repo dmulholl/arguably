@@ -10,6 +10,7 @@
 //! * Support for git-style command interfaces with arbitrarily-nested commands.
 //!
 //! ## Example
+//!
 //! ```
 //! # use arguably::ArgParser;
 //! let mut parser = ArgParser::new()
@@ -36,36 +37,47 @@
 //! ```
 
 use std::collections::HashMap;
+use std::fmt;
+use std::error;
 
 
-/// Covers all types of error returned by the library.
+/// Error types returned by the library.
 #[derive(Debug)]
 pub enum Error {
-    /// Occurs when the parser is presented with an unregistered option name, either
-    /// on the command line or in an API call.
+    /// Returned when the parser detects an unregistered flag, option, or command name,
+    /// either among the command line arguments or in an API call.
     BadName(String),
 
-    /// Occurs when the parser detects an option with a missing value.
+    /// Returned when the parser detects an option with a missing value.
     MissingValue(String),
 
-    /// Occurs when the parser detects a help command with a missing argument.
+    /// Returned when the parser detects a help command with a missing argument.
     MissingHelpArg,
 
-    /// Occurs when the command line arguments are not valid unicode strings.
+    /// Returned when the command line arguments are not valid unicode strings.
     NotUnicode,
 }
 
 
+impl error::Error for Error {}
+
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::BadName(msg) =>  write!(f, "Error: {}", msg),
+            Error::MissingValue(msg) =>  write!(f, "Error: {}", msg),
+            Error::MissingHelpArg => write!(f, "Error: missing argument for the help command"),
+            Error::NotUnicode => write!(f, "Error: arguments are not valid unicode strings"),
+        }
+    }
+}
+
+
 impl Error {
-    /// Prints an error message to `stderr` and exits with status code 1.
+    /// Prints an error message to `stderr` and exits with a non-zero status code.
     pub fn exit(self) -> ! {
-        let msg = match self {
-            Error::BadName(msg) =>  msg,
-            Error::MissingValue(msg) =>  msg,
-            Error::MissingHelpArg => "missing argument for the help command".to_string(),
-            Error::NotUnicode => "arguments are not unicode strings".to_string(),
-        };
-        eprintln!("Error: {}.", msg);
+        eprintln!("{}.", self);
         std::process::exit(1);
     }
 }
@@ -216,8 +228,8 @@ impl ArgParser {
         self
     }
 
-    /// Returns the value of the named option. Returns an error if `name` is not a registered
-    /// option name. Returns `None` if the option was not found.
+    /// Returns the value of the named option. Returns `Error::BadName` if `name` is not a
+    /// registered option name. Returns `None` if the option was not found.
     pub fn value(&self, name: &str) -> Result<Option<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
             if let Some(value) = self.options[*index].values.last() {
@@ -228,7 +240,7 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
-    /// Returns the named option's list of values. Returns an error if `name` is not a
+    /// Returns the named option's list of values. Returns `Error::BadName` if `name` is not a
     /// registered option name.
     pub fn values(&self, name: &str) -> Result<Vec<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
@@ -237,8 +249,8 @@ impl ArgParser {
         Err(Error::BadName(format!("'{}' is not a registered option name", name)))
     }
 
-    /// Returns the number of times the named option or flag  was found. Returns an error
-    /// if `name` is not a registered option name.
+    /// Returns the number of times the named flag or option was found. Returns `Error::BadName`
+    /// if `name` is not a registered flag or option name.
     pub fn count(&self, name: &str) -> Result<usize, Error> {
         if let Some(index) = self.flag_map.get(name) {
             return Ok(self.flags[*index].count);
@@ -246,11 +258,11 @@ impl ArgParser {
         if let Some(index) = self.option_map.get(name) {
             return Ok(self.options[*index].values.len());
         }
-        Err(Error::BadName(format!("'{}' is not a registered name", name)))
+        Err(Error::BadName(format!("'{}' is not a registered flag or option name", name)))
     }
 
-    /// Returns `true` if the named option or flag was found. Returns an error if `name`
-    /// is not a registered option name.
+    /// Returns `true` if the named flag or option was found. Returns `Error::BadName` if `name`
+    /// is not a registered flag or option name.
     pub fn found(&self, name: &str) -> Result<bool, Error> {
         match self.count(name) {
             Ok(count) => Ok(count > 0),
@@ -393,30 +405,21 @@ impl ArgParser {
     fn handle_long_opt(&mut self, arg: &str, argstream: &mut ArgStream) -> Result<(), Error> {
         if let Some(index) = self.flag_map.get(&arg[2..]) {
             self.flags[*index].count += 1;
-        }
-
-        else if let Some(index) = self.option_map.get(&arg[2..]) {
+        } else if let Some(index) = self.option_map.get(&arg[2..]) {
             if argstream.has_next() {
                 self.options[*index].values.push(argstream.next());
             } else {
                 return Err(Error::MissingValue(format!("missing value for {}", arg)));
             }
-        }
-
-        else if arg == "--help" && self.helptext.is_some() {
+        } else if arg == "--help" && self.helptext.is_some() {
             println!("{}", self.helptext.as_ref().unwrap().trim());
             std::process::exit(0);
-        }
-
-        else if arg == "--version" && self.version.is_some() {
+        } else if arg == "--version" && self.version.is_some() {
             println!("{}", self.version.as_ref().unwrap().trim());
             std::process::exit(0);
+        } else {
+            return Err(Error::BadName(format!("{} is not a recognised flag or option name", arg)));
         }
-
-        else {
-            return Err(Error::BadName(format!("{} is not a recognised option name", arg)));
-        }
-
         Ok(())
     }
 
@@ -428,9 +431,12 @@ impl ArgParser {
                 if argstream.has_next() {
                     self.options[*index].values.push(argstream.next());
                 } else {
-                    return Err(
-                        Error::MissingValue(format!("missing value for {}", arg))
-                    );
+                    let msg = if arg.chars().count() > 2 {
+                        format!("missing value for '{}' in {}", c, arg)
+                    } else {
+                        format!("missing value for {}", arg)
+                    };
+                    return Err(Error::MissingValue(msg));
                 }
             } else if c == 'h' && self.helptext.is_some() {
                 println!("{}", self.helptext.as_ref().unwrap().trim());
@@ -439,9 +445,12 @@ impl ArgParser {
                 println!("{}", self.version.as_ref().unwrap().trim());
                 std::process::exit(0);
             } else {
-                return Err(
-                    Error::BadName(format!("'{}' in {} is not a recognised option name", c, arg))
-                );
+                let msg = if arg.chars().count() > 2 {
+                    format!("'{}' in {} is not a recognised flag or option name", c, arg)
+                } else {
+                    format!("{} is not a recognised flag or option name", arg)
+                };
+                return Err(Error::BadName(msg));
             }
         }
         Ok(())
