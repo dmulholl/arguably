@@ -128,8 +128,9 @@ impl ArgParser {
         }
     }
 
-    /// Sets the parser's helptext string. Supplying a helptext string turns on support
-    /// for an automatic `--help/-h` flag.
+    /// Sets the parser's helptext string. Supplying a helptext string activates support
+    /// for an automatic `--help` flag, also a `-h` shortcut if not registered by another
+    /// option.
     ///
     /// ```
     /// # use arguably::ArgParser;
@@ -141,8 +142,9 @@ impl ArgParser {
         self
     }
 
-    /// Sets the parser's version string. Supplying a version string turns on support
-    /// for an automatic `--version/-v` flag.
+    /// Sets the parser's version string. Supplying a version string activates support
+    /// for an automatic `--version` flag, also a `-v` shortcut if not registered by another
+    /// option.
     ///
     /// ```
     /// # use arguably::ArgParser;
