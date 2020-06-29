@@ -46,7 +46,7 @@ use std::error;
 pub enum Error {
     /// Returned when the parser detects an unregistered flag, option, or command name,
     /// either among the command line arguments or in an API call.
-    BadName(String),
+    InvalidName(String),
 
     /// Returned when the parser detects an option with a missing value.
     MissingValue(String),
@@ -55,7 +55,7 @@ pub enum Error {
     MissingHelpArg,
 
     /// Returned when the command line arguments are not valid unicode strings.
-    NotUnicode,
+    InvalidUnicode,
 }
 
 
@@ -65,10 +65,10 @@ impl error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::BadName(msg) =>  write!(f, "Error: {}", msg),
+            Error::InvalidName(msg) =>  write!(f, "Error: {}", msg),
             Error::MissingValue(msg) =>  write!(f, "Error: {}", msg),
             Error::MissingHelpArg => write!(f, "Error: missing argument for the help command"),
-            Error::NotUnicode => write!(f, "Error: arguments are not valid unicode strings"),
+            Error::InvalidUnicode => write!(f, "Error: arguments are not valid unicode strings"),
         }
     }
 }
@@ -208,6 +208,9 @@ impl ArgParser {
     ///     );
     /// ```
     pub fn command(mut self, name: &str, cmd_parser: ArgParser) -> Self {
+        if cmd_parser.helptext.is_some() {
+            self.auto_help_cmd = true;
+        }
         self.commands.push(cmd_parser);
         let index = self.commands.len() - 1;
         for alias in name.split_whitespace() {
@@ -224,13 +227,14 @@ impl ArgParser {
         self
     }
 
-    /// Turns on an automatic `help` command for printing subcommand helptext.
-    pub fn enable_help_command(mut self) -> Self {
-        self.auto_help_cmd = true;
+    /// Toggles support for the `help` command which prints subcommand helptext. The `help`
+    /// command is automatically activated when a command with helptext is registered.
+    pub fn help_command(mut self, enable: bool) -> Self {
+        self.auto_help_cmd = enable;
         self
     }
 
-    /// Returns the value of the named option. Returns `Error::BadName` if `name` is not a
+    /// Returns the value of the named option. Returns `Error::InvalidName` if `name` is not a
     /// registered option name. Returns `None` if the option was not found.
     pub fn value(&self, name: &str) -> Result<Option<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
@@ -239,19 +243,19 @@ impl ArgParser {
             }
             return Ok(None);
         }
-        Err(Error::BadName(format!("'{}' is not a registered option name", name)))
+        Err(Error::InvalidName(format!("'{}' is not a registered option name", name)))
     }
 
-    /// Returns the named option's list of values. Returns `Error::BadName` if `name` is not a
+    /// Returns the named option's list of values. Returns `Error::InvalidName` if `name` is not a
     /// registered option name.
     pub fn values(&self, name: &str) -> Result<Vec<String>, Error> {
         if let Some(index) = self.option_map.get(name) {
             return Ok(self.options[*index].values.clone());
         }
-        Err(Error::BadName(format!("'{}' is not a registered option name", name)))
+        Err(Error::InvalidName(format!("'{}' is not a registered option name", name)))
     }
 
-    /// Returns the number of times the named flag or option was found. Returns `Error::BadName`
+    /// Returns the number of times the named flag or option was found. Returns `Error::InvalidName`
     /// if `name` is not a registered flag or option name.
     pub fn count(&self, name: &str) -> Result<usize, Error> {
         if let Some(index) = self.flag_map.get(name) {
@@ -260,10 +264,10 @@ impl ArgParser {
         if let Some(index) = self.option_map.get(name) {
             return Ok(self.options[*index].values.len());
         }
-        Err(Error::BadName(format!("'{}' is not a registered flag or option name", name)))
+        Err(Error::InvalidName(format!("'{}' is not a registered flag or option name", name)))
     }
 
-    /// Returns `true` if the named flag or option was found. Returns `Error::BadName` if `name`
+    /// Returns `true` if the named flag or option was found. Returns `Error::InvalidName` if `name`
     /// is not a registered flag or option name.
     pub fn found(&self, name: &str) -> Result<bool, Error> {
         match self.count(name) {
@@ -320,7 +324,7 @@ impl ArgParser {
             if let Ok(string) = os_string.into_string() {
                 strings.push(string);
             } else {
-                return Err(Error::NotUnicode);
+                return Err(Error::InvalidUnicode);
             }
         }
         let mut stream = ArgStream::new(strings);
@@ -385,9 +389,9 @@ impl ArgParser {
                         println!("{}", helptext);
                         std::process::exit(0);
                     } else {
-                        return Err(
-                            Error::BadName(format!("'{}' is not a recognised command name", &name))
-                        );
+                        return Err(Error::InvalidName(
+                            format!("'{}' is not a recognised command name", &name)
+                        ));
                     }
                 } else {
                     return Err(Error::MissingHelpArg);
@@ -420,7 +424,9 @@ impl ArgParser {
             println!("{}", self.version.as_ref().unwrap().trim());
             std::process::exit(0);
         } else {
-            return Err(Error::BadName(format!("{} is not a recognised flag or option name", arg)));
+            return Err(Error::InvalidName(
+                format!("{} is not a recognised flag or option name", arg)
+            ));
         }
         Ok(())
     }
@@ -452,7 +458,7 @@ impl ArgParser {
                 } else {
                     format!("{} is not a recognised flag or option name", arg)
                 };
-                return Err(Error::BadName(msg));
+                return Err(Error::InvalidName(msg));
             }
         }
         Ok(())
@@ -471,7 +477,7 @@ impl ArgParser {
                 return Ok(());
             }
         }
-        return Err(Error::BadName(format!("{} is not a recognised option name", name)));
+        return Err(Error::InvalidName(format!("{} is not a recognised option name", name)));
     }
 }
 
