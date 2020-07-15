@@ -20,7 +20,7 @@ fn main() {
         println!("Found --bar/-b option with value: {}", value);
     }
 
-    for arg in parser.args() {
+    for arg in parser.args {
         println!("Arg: {}", arg);
     }
 }

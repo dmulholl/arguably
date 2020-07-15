@@ -31,7 +31,7 @@
 //!     println!("Found --bar/-b option with value: {}", value);
 //! }
 //!
-//! for arg in parser.args() {
+//! for arg in parser.args {
 //!     println!("Arg: {}", arg);
 //! }
 //! ```
@@ -96,16 +96,23 @@ impl Error {
 pub struct ArgParser {
     helptext: Option<String>,
     version: Option<String>,
-    arguments: Vec<String>,
     options: Vec<Opt>,
     option_map: HashMap<String, usize>,
     flags: Vec<Flag>,
     flag_map: HashMap<String, usize>,
     commands: Vec<ArgParser>,
     command_map: HashMap<String, usize>,
-    command_name: Option<String>,
     callback: Option<fn(&str, &ArgParser)>,
     auto_help_cmd: bool,
+
+    /// Stores positional arguments.
+    pub args: Vec<String>,
+
+    /// Stores the command name, if a command was found.
+    pub cmd_name: Option<String>,
+
+    /// Stores the command's `ArgParser` instance, if a command was found.
+    pub cmd_parser: Option<Box<ArgParser>>,
 }
 
 
@@ -115,16 +122,17 @@ impl ArgParser {
         ArgParser {
             helptext: None,
             version: None,
-            arguments: Vec::new(),
+            args: Vec::new(),
             options: Vec::new(),
             option_map: HashMap::new(),
             flags: Vec::new(),
             flag_map: HashMap::new(),
             commands: Vec::new(),
             command_map: HashMap::new(),
-            command_name: None,
+            cmd_name: None,
             callback: None,
             auto_help_cmd: false,
+            cmd_parser: None,
         }
     }
 
@@ -220,14 +228,14 @@ impl ArgParser {
     }
 
     /// Registers a callback function on a command parser. If the command is found the
-    /// callback will be called and passed the command name and a reference to the
-    /// command's parser instance.
+    /// function will be called and passed the command name and a reference to the
+    /// command's `ArgParser` instance.
     pub fn callback(mut self, f: fn(&str, &ArgParser)) -> Self {
         self.callback = Some(f);
         self
     }
 
-    /// Toggles support for the `help` command which prints subcommand helptext. The `help`
+    /// Toggles support for an automatic `help` command which prints subcommand helptext. The `help`
     /// command is automatically activated when a command with helptext is registered.
     pub fn help_command(mut self, enable: bool) -> Self {
         self.auto_help_cmd = enable;
@@ -276,40 +284,6 @@ impl ArgParser {
         }
     }
 
-    /// Returns `true` if one or more positional arguments have been found.
-    pub fn has_args(&self) -> bool {
-        self.arguments.len() > 0
-    }
-
-    /// Returns the number of positional arguments.
-    pub fn num_args(&self) -> usize {
-        self.arguments.len()
-    }
-
-    /// Returns the positional arguments.
-    pub fn args(&self) -> Vec<String> {
-        self.arguments.clone()
-    }
-
-    /// Returns `true` if a command was found.
-    pub fn has_cmd(&self) -> bool {
-        self.command_name.is_some()
-    }
-
-    /// If a command was found, returns the command's name.
-    pub fn cmd_name(&self) -> Option<&str> {
-        self.command_name.as_deref()
-    }
-
-    /// If a command was found, returns a reference to the command's ArgParser instance.
-    pub fn cmd_parser(&self) -> Option<&ArgParser> {
-        if let Some(name) = self.command_name.as_ref() {
-            let index = self.command_map.get(name).unwrap();
-            return Some(&self.commands[*index]);
-        }
-        None
-    }
-
     /// Parse the program's command line arguments.
     ///
     /// ```
@@ -348,7 +322,7 @@ impl ArgParser {
 
             if arg == "--" {
                 while argstream.has_next() {
-                    self.arguments.push(argstream.next());
+                    self.args.push(argstream.next());
                 }
             }
 
@@ -362,7 +336,7 @@ impl ArgParser {
 
             else if arg.starts_with("-") {
                 if arg == "-" || arg.chars().nth(1).unwrap().is_numeric() {
-                    self.arguments.push(arg);
+                    self.args.push(arg);
                 } else if arg.contains("=") {
                     self.handle_equals_opt(&arg)?;
                 } else {
@@ -371,13 +345,16 @@ impl ArgParser {
             }
 
             else if is_first_arg && self.command_map.contains_key(&arg) {
-                self.command_name = Some(arg.to_string());
                 let index = self.command_map.get(&arg).unwrap();
-                let cmd_parser = &mut self.commands[*index];
+                let mut cmd_parser = self.commands.remove(*index);
+                self.command_map.clear();
+                self.commands.clear();
                 cmd_parser.parse_argstream(argstream)?;
                 if let Some(callback) = cmd_parser.callback {
-                    callback(&arg, cmd_parser);
+                    callback(&arg, &cmd_parser);
                 }
+                self.cmd_name = Some(arg);
+                self.cmd_parser = Some(Box::new(cmd_parser));
             }
 
             else if is_first_arg && arg == "help" && self.auto_help_cmd {
@@ -399,7 +376,7 @@ impl ArgParser {
             }
 
             else {
-                self.arguments.push(arg);
+                self.args.push(arg);
             }
 
             is_first_arg = false;

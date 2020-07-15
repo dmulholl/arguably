@@ -118,32 +118,27 @@ fn option_multiple_values() {
 fn command_missing() {
     let mut parser = ArgParser::new().command("cmd", ArgParser::new());
     let _ = parser.parse_args(vec!["foo", "bar"]);
-    assert_eq!(parser.has_cmd(), false);
-    assert!(parser.cmd_name().is_none());
+    assert!(parser.cmd_name.is_none());
 }
 
 #[test]
 fn command_found() {
     let mut parser = ArgParser::new().command("cmd", ArgParser::new());
     let _ = parser.parse_args(vec!["cmd", "foo", "bar"]);
-    assert_eq!(parser.has_cmd(), true);
-    assert_eq!(parser.cmd_name().unwrap(), "cmd");
+    assert_eq!(parser.cmd_name.unwrap(), "cmd");
 }
 
 #[test]
 fn arguments_empty_input() {
     let mut parser = ArgParser::new();
     let _ = parser.parse_args(vec![]);
-    assert_eq!(parser.has_args(), false);
-    assert_eq!(parser.num_args(), 0);
+    assert_eq!(parser.args.len(), 0);
 }
 
 #[test]
 fn arguments_found() {
     let mut parser = ArgParser::new();
     let _ = parser.parse_args(vec!["foo", "bar"]);
-    assert_eq!(parser.has_args(), true);
-    assert_eq!(parser.num_args(), 2);
-    assert_eq!(parser.args(), vec!["foo", "bar"]);
+    assert_eq!(parser.args, vec!["foo", "bar"]);
 }
 
