@@ -15,6 +15,6 @@ fn main() {
     }
 }
 
-fn cmd_boo(_cmd: &str, _parser: &ArgParser) {
+fn cmd_boo(_cmd_name: &str, _cmd_parser: &ArgParser) {
     println!("boo!");
 }
