@@ -103,7 +103,6 @@ pub struct ArgParser {
     commands: Vec<ArgParser>,
     command_map: HashMap<String, usize>,
     callback: Option<fn(&str, &ArgParser)>,
-    auto_help_cmd: bool,
 
     /// Stores positional arguments.
     pub args: Vec<String>,
@@ -113,6 +112,11 @@ pub struct ArgParser {
 
     /// Stores the command's `ArgParser` instance, if a command was found.
     pub cmd_parser: Option<Box<ArgParser>>,
+
+    /// Boolean switch; activates support for an automatic `help` command which prints subcommand
+    /// helptext. Defaults to `false` but gets toggled to `true` when a command with helptext is
+    /// registered.
+    pub cmd_help: bool,
 }
 
 
@@ -129,10 +133,10 @@ impl ArgParser {
             flag_map: HashMap::new(),
             commands: Vec::new(),
             command_map: HashMap::new(),
-            cmd_name: None,
             callback: None,
-            auto_help_cmd: false,
+            cmd_name: None,
             cmd_parser: None,
+            cmd_help: false,
         }
     }
 
@@ -202,7 +206,7 @@ impl ArgParser {
         self
     }
 
-    /// Registers a new command. The name parameter accepts an unlimited number of
+    /// Registers a new command. The `name` parameter accepts an unlimited number of
     /// space-separated aliases. The command's helptext, flags, and options can be
     /// registered on the command's ArgParser instance.
     ///
@@ -217,7 +221,7 @@ impl ArgParser {
     /// ```
     pub fn command(mut self, name: &str, cmd_parser: ArgParser) -> Self {
         if cmd_parser.helptext.is_some() {
-            self.auto_help_cmd = true;
+            self.cmd_help = true;
         }
         self.commands.push(cmd_parser);
         let index = self.commands.len() - 1;
@@ -232,13 +236,6 @@ impl ArgParser {
     /// command's `ArgParser` instance.
     pub fn callback(mut self, f: fn(&str, &ArgParser)) -> Self {
         self.callback = Some(f);
-        self
-    }
-
-    /// Toggles support for an automatic `help` command which prints subcommand helptext. The `help`
-    /// command is automatically activated when a command with helptext is registered.
-    pub fn help_command(mut self, enable: bool) -> Self {
-        self.auto_help_cmd = enable;
         self
     }
 
@@ -357,7 +354,7 @@ impl ArgParser {
                 self.cmd_parser = Some(Box::new(cmd_parser));
             }
 
-            else if is_first_arg && arg == "help" && self.auto_help_cmd {
+            else if is_first_arg && self.cmd_help && arg == "help" {
                 if argstream.has_next() {
                     let name = argstream.next();
                     if let Some(index) = self.command_map.get(&name) {
