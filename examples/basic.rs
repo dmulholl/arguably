@@ -12,11 +12,11 @@ fn main() {
         err.exit();
     }
 
-    if parser.found("foo").unwrap() {
+    if parser.found("foo") {
         println!("Found --foo/-f flag.");
     }
 
-    if let Some(value) = parser.value("bar").unwrap() {
+    if let Some(value) = parser.value("bar") {
         println!("Found --bar/-b option with value: {}", value);
     }
 

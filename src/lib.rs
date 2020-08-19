@@ -23,11 +23,11 @@
 //!     err.exit();
 //! }
 //!
-//! if parser.found("foo").unwrap() {
+//! if parser.found("foo") {
 //!     println!("Found --foo/-f flag.");
 //! }
 //!
-//! if let Some(value) = parser.value("bar").unwrap() {
+//! if let Some(value) = parser.value("bar") {
 //!     println!("Found --bar/-b option with value: {}", value);
 //! }
 //!
@@ -44,8 +44,7 @@ use std::error;
 /// Error types returned by the library.
 #[derive(Debug)]
 pub enum Error {
-    /// Returned when the parser detects an unregistered flag, option, or command name,
-    /// either among the command line arguments or in an API call.
+    /// Returned when the parser detects an unregistered flag, option, or command name.
     InvalidName(String),
 
     /// Returned when the parser detects an option with a missing value.
@@ -239,46 +238,43 @@ impl ArgParser {
         self
     }
 
-    /// Returns the value of the named option. Returns `Error::InvalidName` if `name` is not a
-    /// registered option name. Returns `None` if the option was not found.
-    pub fn value(&self, name: &str) -> Result<Option<String>, Error> {
+    /// Returns the value of the named option or `None` if the option was not found.
+    /// (This function will panic if `name` is not a registered option name.)
+    pub fn value(&self, name: &str) -> Option<String> {
         if let Some(index) = self.option_map.get(name) {
             if let Some(value) = self.options[*index].values.last() {
-                return Ok(Some(value.to_string()));
+                return Some(value.to_string());
             }
-            return Ok(None);
+            return None;
         }
-        Err(Error::InvalidName(format!("'{}' is not a registered option name", name)))
+        panic!("'{}' is not a registered option name", name);
     }
 
-    /// Returns the named option's list of values. Returns `Error::InvalidName` if `name` is not a
-    /// registered option name.
-    pub fn values(&self, name: &str) -> Result<Vec<String>, Error> {
+    /// Returns the named option's list of values.
+    /// (This function will panic if `name` is not a registered option name.)
+    pub fn values(&self, name: &str) -> Vec<String> {
         if let Some(index) = self.option_map.get(name) {
-            return Ok(self.options[*index].values.clone());
+            return self.options[*index].values.clone();
         }
-        Err(Error::InvalidName(format!("'{}' is not a registered option name", name)))
+        panic!("'{}' is not a registered option name", name);
     }
 
-    /// Returns the number of times the named flag or option was found. Returns `Error::InvalidName`
-    /// if `name` is not a registered flag or option name.
-    pub fn count(&self, name: &str) -> Result<usize, Error> {
+    /// Returns the number of times the named flag or option was found.
+    /// (This function will panic if `name` is not a registered flag or option name.)
+    pub fn count(&self, name: &str) -> usize {
         if let Some(index) = self.flag_map.get(name) {
-            return Ok(self.flags[*index].count);
+            return self.flags[*index].count;
         }
         if let Some(index) = self.option_map.get(name) {
-            return Ok(self.options[*index].values.len());
+            return self.options[*index].values.len();
         }
-        Err(Error::InvalidName(format!("'{}' is not a registered flag or option name", name)))
+        panic!("'{}' is not a registered flag or option name", name);
     }
 
-    /// Returns `true` if the named flag or option was found. Returns `Error::InvalidName` if `name`
-    /// is not a registered flag or option name.
-    pub fn found(&self, name: &str) -> Result<bool, Error> {
-        match self.count(name) {
-            Ok(count) => Ok(count > 0),
-            Err(err) => Err(err),
-        }
+    /// Returns `true` if the named flag or option was found.
+    /// (This function will panic if `name` is not a registered flag or option name.)
+    pub fn found(&self, name: &str) -> bool {
+        self.count(name) > 0
     }
 
     /// Parse the program's command line arguments.
