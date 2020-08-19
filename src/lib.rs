@@ -173,7 +173,7 @@ impl ArgParser {
     /// ```
     /// # use arguably::ArgParser;
     /// let parser = ArgParser::new()
-    ///     .option("name1 name2 n");
+    ///     .option("foo f");
     /// ```
     pub fn option(mut self, name: &str) -> Self {
         self.options.push(Opt {
@@ -192,7 +192,7 @@ impl ArgParser {
     /// ```
     /// # use arguably::ArgParser;
     /// let parser = ArgParser::new()
-    ///     .flag("name1 name2 n");
+    ///     .flag("foo f");
     /// ```
     pub fn flag(mut self, name: &str) -> Self {
         self.flags.push(Flag {
@@ -299,7 +299,7 @@ impl ArgParser {
         Ok(())
     }
 
-    /// Parse a vector of strings. This function is intended for testing only.
+    /// Parse a vector of argument strings.
     pub fn parse_args(&mut self, args: Vec<&str>) -> Result<(), Error> {
         let strings = args.iter().map(|s| s.to_string()).collect();
         let mut stream = ArgStream::new(strings);
