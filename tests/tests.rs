@@ -67,43 +67,43 @@ fn flag_multiple_condensed() {
 
 #[test]
 fn option_empty_input() {
-    let mut parser = ArgParser::new().option("opt o");
+    let mut parser = ArgParser::new().option("opt o", "default");
     let _ = parser.parse_args(vec![]);
     assert_eq!(parser.found("opt"), false);
-    assert!(parser.value("opt").is_none());
+    assert!(parser.value("opt") == "default");
 }
 
 #[test]
 fn option_missing() {
-    let mut parser = ArgParser::new().option("opt o");
+    let mut parser = ArgParser::new().option("opt o", "default");
     let _ = parser.parse_args(vec!["foo", "bar"]);
     assert_eq!(parser.found("opt"), false);
-    assert!(parser.value("opt").is_none());
+    assert!(parser.value("opt") == "default");
 }
 
 #[test]
 fn option_present_long() {
-    let mut parser = ArgParser::new().option("opt o");
+    let mut parser = ArgParser::new().option("opt o", "default");
     let _ = parser.parse_args(vec!["--opt", "foo"]);
     assert_eq!(parser.found("opt"), true);
-    assert_eq!(parser.value("opt").unwrap(), "foo");
+    assert!(parser.value("opt") == "foo");
 }
 
 #[test]
 fn option_present_short() {
-    let mut parser = ArgParser::new().option("opt o");
+    let mut parser = ArgParser::new().option("opt o", "default");
     let _ = parser.parse_args(vec!["-o", "foo"]);
     assert_eq!(parser.found("opt"), true);
-    assert_eq!(parser.value("opt").unwrap(), "foo");
+    assert!(parser.value("opt") == "foo");
 }
 
 #[test]
 fn option_multiple_values() {
-    let mut parser = ArgParser::new().option("opt o");
+    let mut parser = ArgParser::new().option("opt o", "default");
     let _ = parser.parse_args(vec!["-o", "foo", "--opt", "bar"]);
     assert_eq!(parser.found("opt"), true);
     assert_eq!(parser.count("opt"), 2);
-    assert_eq!(parser.value("opt").unwrap(), "bar");
+    assert_eq!(parser.value("opt"), "bar");
     assert_eq!(parser.values("opt"), vec!["foo", "bar"]);
 }
 

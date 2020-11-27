@@ -5,19 +5,21 @@ fn main() {
     let mut parser = ArgParser::new()
         .helptext("Usage: foobar...")
         .version("1.0")
-        .flag("foo f")
-        .option("bar b");
+        .option("bar b", "default")
+        .flag("foo f");
 
     if let Err(err) = parser.parse() {
         err.exit();
     }
 
     if parser.found("foo") {
-        println!("Found --foo/-f flag.");
+        println!("Flag --foo/-f found.");
     }
 
-    if let Some(value) = parser.value("bar") {
-        println!("Found --bar/-b option with value: {}", value);
+    if parser.found("bar") {
+        println!("Option --bar/-b found with value: {}", parser.value("bar"));
+    } else {
+        println!("Option --bar/-b has default value: {}", parser.value("bar"));
     }
 
     for arg in parser.args {

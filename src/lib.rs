@@ -16,19 +16,21 @@
 //! let mut parser = ArgParser::new()
 //!     .helptext("Usage: foobar...")
 //!     .version("1.0")
-//!     .flag("foo f")
-//!     .option("bar b");
+//!     .option("bar b", "default")
+//!     .flag("foo f");
 //!
 //! if let Err(err) = parser.parse() {
 //!     err.exit();
 //! }
 //!
 //! if parser.found("foo") {
-//!     println!("Found --foo/-f flag.");
+//!     println!("Flag --foo/-f found.");
 //! }
 //!
-//! if let Some(value) = parser.value("bar") {
-//!     println!("Found --bar/-b option with value: {}", value);
+//! if parser.found("bar") {
+//!     println!("Option --bar/-b found with value: {}", parser.value("bar"));
+//! } else {
+//!     println!("Option --bar/-b has default value: {}", parser.value("bar"));
 //! }
 //!
 //! for arg in parser.args {
@@ -89,8 +91,8 @@ impl Error {
 /// let parser = ArgParser::new()
 ///     .helptext("Usage: appname...")
 ///     .version("1.0")
-///     .flag("foo f")
-///     .option("bar b");
+///     .option("bar b", "default")
+///     .flag("foo f");
 /// ```
 pub struct ArgParser {
     helptext: Option<String>,
@@ -168,16 +170,18 @@ impl ArgParser {
     }
 
     /// Registers a new option. The `name` parameter accepts an unlimited number of
-    /// space-separated aliases and single-character shortcuts.
+    /// space-separated aliases and single-character shortcuts. The `default` value
+    /// will be used if the option is not found.
     ///
     /// ```
     /// # use arguably::ArgParser;
     /// let parser = ArgParser::new()
-    ///     .option("foo f");
+    ///     .option("foo f", "default value");
     /// ```
-    pub fn option(mut self, name: &str) -> Self {
+    pub fn option(mut self, name: &str, default: &str) -> Self {
         self.options.push(Opt {
             values: Vec::new(),
+            default: String::from(default)
         });
         let index = self.options.len() - 1;
         for alias in name.split_whitespace() {
@@ -238,19 +242,22 @@ impl ArgParser {
         self
     }
 
-    /// Returns the value of the named option or `None` if the option was not found.
+    /// Returns the value of the named option. Returns the default value registered
+    /// with the option if the option was not found. Any of the option's registered
+    /// aliases or shortcuts can be used for the `name` parameter.
     /// (This function will panic if `name` is not a registered option name.)
-    pub fn value(&self, name: &str) -> Option<String> {
+    pub fn value(&self, name: &str) -> String {
         if let Some(index) = self.option_map.get(name) {
             if let Some(value) = self.options[*index].values.last() {
-                return Some(value.to_string());
+                return value.to_string();
             }
-            return None;
+            return self.options[*index].default.clone();
         }
         panic!("'{}' is not a registered option name", name);
     }
 
-    /// Returns the named option's list of values.
+    /// Returns the named option's list of values. Any of the option's registered
+    /// aliases or shortcuts can be used for the `name` parameter.
     /// (This function will panic if `name` is not a registered option name.)
     pub fn values(&self, name: &str) -> Vec<String> {
         if let Some(index) = self.option_map.get(name) {
@@ -259,7 +266,8 @@ impl ArgParser {
         panic!("'{}' is not a registered option name", name);
     }
 
-    /// Returns the number of times the named flag or option was found.
+    /// Returns the number of times the named flag or option was found. Any registered
+    /// alias or shortcut can be used for the `name` parameter.
     /// (This function will panic if `name` is not a registered flag or option name.)
     pub fn count(&self, name: &str) -> usize {
         if let Some(index) = self.flag_map.get(name) {
@@ -271,7 +279,8 @@ impl ArgParser {
         panic!("'{}' is not a registered flag or option name", name);
     }
 
-    /// Returns `true` if the named flag or option was found.
+    /// Returns `true` if the named flag or option was found. Any registered alias or
+    /// shortcut can be used for the `name` parameter.
     /// (This function will panic if `name` is not a registered flag or option name.)
     pub fn found(&self, name: &str) -> bool {
         self.count(name) > 0
@@ -452,6 +461,7 @@ impl ArgParser {
 }
 
 
+// This type functions as a wrapper to make the input argument vector available as a stream.
 struct ArgStream {
     args: Vec<String>,
     index: usize,
@@ -477,11 +487,14 @@ impl ArgStream {
 }
 
 
+// We create a single Opt instance for each registered option, i.e. each call to `.option()`.
 struct Opt {
     values: Vec<String>,
+    default: String,
 }
 
 
+// We create a single Flag instance for each registered flag, i.e. each call to `.flag()`.
 struct Flag {
     count: usize,
 }
