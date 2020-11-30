@@ -7,4 +7,5 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/dmulholl/arguably"
 homepage = "http://www.dmulholl.com/dev/arguably.html"
 description = "A ridiculously simple argument-parsing library."
+readme = "readme.md"
 
