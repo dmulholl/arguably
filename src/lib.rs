@@ -27,11 +27,7 @@
 //!     println!("Flag --foo/-f found.");
 //! }
 //!
-//! if parser.found("bar") {
-//!     println!("Option --bar/-b found with value: {}", parser.value("bar"));
-//! } else {
-//!     println!("Option --bar/-b has default value: {}", parser.value("bar"));
-//! }
+//! println!("Option --bar/-b has value: {}", parser.value("bar"));
 //!
 //! for arg in parser.args {
 //!     println!("Arg: {}", arg);

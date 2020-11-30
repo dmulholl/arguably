@@ -1,4 +1,3 @@
-extern crate arguably;
 use arguably::ArgParser;
 
 fn main() {
