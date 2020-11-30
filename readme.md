@@ -1,6 +1,6 @@
 # Arguably
 
-**Arguably** is a minimalist Rust library for parsing command line arguments. Its features include:
+Arguably is a minimalist Rust library for parsing command line arguments. Its features include:
 
 * Long-form boolean flags with single-character shortcuts: `--flag`, `-f`.
 
@@ -17,8 +17,8 @@
 
 ### Details
 
-* [Quickstart Tutorial](http://www.dmulholl.com/arguably/quickstart.html)
-* [Command Line Interface](http://www.dmulholl.com/arguably/cli.html)
+* [Quickstart Tutorial](http://www.dmulholl.com/dev/arguably/quickstart.html)
+* [Command Line Interface](http://www.dmulholl.com/dev/arguably/cli.html)
 
 
 ### Links
