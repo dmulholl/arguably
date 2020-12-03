@@ -84,7 +84,7 @@ impl Error {
 ///
 /// ```
 /// # use arguably::ArgParser;
-/// let parser = ArgParser::new()
+/// let mut parser = ArgParser::new()
 ///     .helptext("Usage: appname...")
 ///     .version("1.0")
 ///     .option("bar b", "default")
@@ -143,7 +143,7 @@ impl ArgParser {
     ///
     /// ```
     /// # use arguably::ArgParser;
-    /// let parser = ArgParser::new()
+    /// let mut parser = ArgParser::new()
     ///     .helptext("Usage: appname...");
     /// ```
     pub fn helptext<S>(mut self, text: S) -> Self where S: Into<String> {
@@ -157,7 +157,7 @@ impl ArgParser {
     ///
     /// ```
     /// # use arguably::ArgParser;
-    /// let parser = ArgParser::new()
+    /// let mut parser = ArgParser::new()
     ///     .version("1.0");
     /// ```
     pub fn version<S>(mut self, text: S) -> Self where S: Into<String> {
@@ -171,7 +171,7 @@ impl ArgParser {
     ///
     /// ```
     /// # use arguably::ArgParser;
-    /// let parser = ArgParser::new()
+    /// let mut parser = ArgParser::new()
     ///     .option("foo f", "default value");
     /// ```
     pub fn option(mut self, name: &str, default: &str) -> Self {
@@ -191,7 +191,7 @@ impl ArgParser {
     ///
     /// ```
     /// # use arguably::ArgParser;
-    /// let parser = ArgParser::new()
+    /// let mut parser = ArgParser::new()
     ///     .flag("foo f");
     /// ```
     pub fn flag(mut self, name: &str) -> Self {
@@ -304,8 +304,8 @@ impl ArgParser {
         Ok(())
     }
 
-    /// Parse a vector of argument strings.
-    pub fn parse_args(&mut self, args: Vec<&str>) -> Result<(), Error> {
+    /// Parse a vector of argument strings. This method is intended for testing use only.
+    pub fn parse_vec(&mut self, args: Vec<&str>) -> Result<(), Error> {
         let strings = args.iter().map(|s| s.to_string()).collect();
         let mut stream = ArgStream::new(strings);
         self.parse_argstream(&mut stream)?;
