@@ -1,6 +1,6 @@
 # Arguably
 
-A ridiculously simple argument parsing library for Rust.
+A ridiculously simple Rust library for parsing command line arguments.
 
 * [Details](http://www.dmulholl.com/dev/arguably.html)
     * [Quickstart Tutorial](http://www.dmulholl.com/dev/arguably/quickstart.html)
