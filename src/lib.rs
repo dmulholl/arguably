@@ -110,9 +110,7 @@ pub struct ArgParser {
     /// Stores the command's `ArgParser` instance, if a command was found.
     pub cmd_parser: Option<Box<ArgParser>>,
 
-    /// Boolean switch; activates support for an automatic `help` command which prints subcommand
-    /// helptext. Defaults to `false` but gets toggled to `true` when a command with helptext is
-    /// registered.
+    /// Deprecated. Use .enable_help_command() instead.
     pub cmd_help: bool,
 }
 
@@ -230,6 +228,15 @@ impl ArgParser {
         self
     }
 
+    /// This boolean switch toggles support for an automatic `help` command that prints subcommand
+    /// helptext. The value defaults to `false` but gets toggled automatically to `true` whenever a
+    /// command with helptext is registered. You can use this method to disable the feature if
+    /// required.
+    pub fn enable_help_command(mut self, enable: bool) -> Self {
+        self.cmd_help = enable;
+        self
+    }
+
     /// Registers a callback function on a command parser. If the command is found the
     /// function will be called and passed the command name and a reference to the
     /// command's `ArgParser` instance.
@@ -304,7 +311,7 @@ impl ArgParser {
         Ok(())
     }
 
-    /// Parse a vector of argument strings. This method is intended for testing use only.
+    /// Parse a vector of arguments.
     pub fn parse_vec(&mut self, args: Vec<&str>) -> Result<(), Error> {
         let strings = args.iter().map(|s| s.to_string()).collect();
         let mut stream = ArgStream::new(strings);
