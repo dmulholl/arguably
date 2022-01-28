@@ -110,7 +110,7 @@ pub struct ArgParser {
     /// Stores the command's `ArgParser` instance, if a command was found.
     pub cmd_parser: Option<Box<ArgParser>>,
 
-    /// Deprecated. Use .enable_help_command() instead.
+    /// Deprecated. Use `.enable_help_command()` instead.
     pub cmd_help: bool,
 }
 
